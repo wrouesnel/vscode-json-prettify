@@ -55,7 +55,7 @@ const JSON_PREPROCESSORS = [
   (input) => input.replace(/\\"/g, '"'),
 ];
 
-function updatePrettifiedJSON(context) {
+function updatePrettifiedJSON(context, searchKeyword = '', searchInputFocused = false, searchInputSelectionStart = 0, searchInputSelectionEnd = 0) {
   const editor = vscode.window.activeTextEditor;
   if (editor) {
     const selection = editor.selection;
@@ -81,7 +81,7 @@ function updatePrettifiedJSON(context) {
           latestJson = prettifiedJSON;
         }
 
-        panel.webview.html = getWebviewContent(prettifiedJSON);
+        panel.webview.html = getWebviewContent(prettifiedJSON, searchKeyword, searchInputFocused, searchInputSelectionStart, searchInputSelectionEnd);
         done = true;  // job done
         break;
       } catch { /* ignore */ }
@@ -90,8 +90,10 @@ function updatePrettifiedJSON(context) {
       if (!sticky) {
         latestJson = undefined;
       }
-      panel.webview.html = getWebviewContent();
+      panel.webview.html = getWebviewContent(undefined, searchKeyword, searchInputFocused, searchInputSelectionStart, searchInputSelectionEnd);
     }
+  } else {
+    panel.webview.html = getWebviewContent(undefined, searchKeyword, searchInputFocused, searchInputSelectionStart, searchInputSelectionEnd);
   }
 }
 
@@ -133,6 +135,9 @@ function createWebviewPanel(context) {
         case 'logMessage':
           console.log(message.text);
           break;
+        case 'searchKeyword':
+          updatePrettifiedJSON(context, message.keyword, true, message.selectionStart, message.selectionEnd);
+          break;
       }
     },
     undefined,
@@ -142,7 +147,7 @@ function createWebviewPanel(context) {
   return newPanel;
 }
 
-function getWebviewContent(content) {
+function getWebviewContent(content, searchKeyword = '', searchInputFocused, searchInputSelectionStart = 0, searchInputSelectionEnd = 0) {
   if (!content) {  // if selection is not a JSON
     if (!!latestJson) {  // if there was a sticky content
       content = latestJson;
@@ -174,6 +179,8 @@ function getWebviewContent(content) {
         .button { padding-right: 10px; padding-left: 10px; }
         .unselectable, #bmc-wbtn { -webkit-user-select: none; user-select: none; }
         pre { padding: 0; margin: 0; }
+        .highlight-match { background-color: yellow; }
+        #search-input { padding: 1px 2px; margin-left: 10px; width: 120px; font-size: 1em; }
       </style>
     </head>
     <body>
@@ -183,14 +190,16 @@ function getWebviewContent(content) {
         <label class='button'>Theme <select id="theme-select">
           ${themeHtml}
         </select></label>
+        <input type="text" id="search-input" placeholder="Find..." value="${searchKeyword}">
       </div>
-      <pre><code id="json-code" class=hljs>${highlightJson(content)}</code></pre>
+      <pre><code id="json-code" class=hljs>${highlightJson(content, searchKeyword)}</code></pre>
       <script>
         const vscode = acquireVsCodeApi();
         const codeElement = document.getElementById('json-code');
         const wrapToggle = document.getElementById('wrap-toggle');
         const stickyToggle = document.getElementById('sticky-toggle');
         const themeSelect = document.getElementById('theme-select');
+        const searchInput = document.getElementById('search-input');
 
         wrapToggle.addEventListener('change', (e) => {
           codeElement.style.whiteSpace = e.target.checked ? 'pre-wrap' : 'pre';
@@ -219,6 +228,38 @@ function getWebviewContent(content) {
           });
         });
 
+        function debounce(func, wait) {
+          let timeout;
+          return function executedFunction(...args) {
+            const later = () => {
+              clearTimeout(timeout);
+              func(...args);
+            };
+            clearTimeout(timeout);
+            timeout = setTimeout(later, wait);
+          };
+        }
+
+        searchInput.addEventListener('input', debounce((e) => {
+          vscode.postMessage({
+            command: 'searchKeyword',
+            keyword: e.target.value,
+            selectionStart: e.target.selectionStart,
+            selectionEnd: e.target.selectionEnd
+          });
+        }, 300));
+
+        // Restore focus to search input after DOM update
+        if (${searchInputFocused}) {
+          setTimeout(() => {
+            const input = document.getElementById('search-input');
+            if (input) {
+              input.focus();
+              input.setSelectionRange(${searchInputSelectionStart}, ${searchInputSelectionEnd});
+            }
+          }, 0);
+        }
+
         // initial theme
         themeSelect.value = '${theme}';
         wrapToggle.checked = ${wrap};
@@ -231,12 +272,52 @@ function getWebviewContent(content) {
     </html>`;
 }
 
-function highlightJson(code) {
+function highlightJson(code, searchKeyword = '') {
+  const regex = searchKeyword ? new RegExp(`(${searchKeyword.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, '\\$&')})`, 'gi') : null;
   const highlightedCode = hljs.highlight(code, { language: 'json' }).value;
   const lines = highlightedCode.split('\n');
-  return lines.map((line, index) => 
-    `<span class="line-number unselectable">${index + 1}</span>${line}`
-  ).join('\n');
+  return lines.map((line, index) => {
+    if (!searchKeyword || !regex) {
+      return `<span class="line-number unselectable">${index + 1}</span>${line}`;
+    }
+
+    const parts = [];
+    let current = '';
+    let inTag = false;
+    let tagContent = '';
+
+    for (let i = 0; i < line.length; i++) {
+      if (line[i] === '<' && !inTag) {
+        if (current) parts.push({ text: current, isTag: false });
+        current = '';
+        inTag = true;
+        tagContent = '<';
+      } else if (line[i] === '>' && inTag) {
+        tagContent += '>';
+        parts.push({ text: tagContent, isTag: true });
+        inTag = false;
+        tagContent = '';
+      } else if (inTag) {
+        tagContent += line[i];
+      } else {
+        current += line[i];
+      }
+    }
+    if (current) parts.push({ text: current, isTag: false });
+    if (tagContent) parts.push({ text: tagContent, isTag: inTag });
+
+    // Apply regex to non-tag parts only
+    const processedParts = parts.map(part => {
+      if (part.isTag) {
+        return part.text;
+      }
+      return part.text.replace(regex, '<span class="highlight-match">$1</span>');
+    });
+
+    // Reconstruct the line
+    const modifiedLine = processedParts.join('');
+    return `<span class="line-number unselectable">${index + 1}</span>${modifiedLine}`;
+  }).join('\n');
 }
 
 function getThemesHtml() {
