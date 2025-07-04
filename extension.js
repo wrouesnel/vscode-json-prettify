@@ -260,6 +260,34 @@ function getWebviewContent(content, searchKeyword = '', searchInputFocused, sear
           }, 0);
         }
 
+        document.addEventListener('keydown', (e) => {
+          if ((e.metaKey || e.ctrlKey) && e.key === 'f') {
+            e.preventDefault();
+            const input = document.getElementById('search-input');
+            if (input) {
+              const isFocused = document.activeElement === input;
+              input.focus();
+              if (!isFocused) {
+                input.select();
+              } else {
+                input.setSelectionRange(input.value.length, input.value.length);
+              }
+            }
+          } else if (e.key === 'Escape') {
+            const input = document.getElementById('search-input');
+            if (input) {
+              input.value = '';
+              input.blur();
+              vscode.postMessage({
+                command: 'searchKeyword',
+                keyword: '',
+                selectionStart: 0,
+                selectionEnd: 0
+              });
+            }
+          }
+        });
+
         // initial theme
         themeSelect.value = '${theme}';
         wrapToggle.checked = ${wrap};
