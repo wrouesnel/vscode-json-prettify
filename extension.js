@@ -314,7 +314,13 @@ function highlightJson(code, searchKeyword = '') {
     let inTag = false;
     let tagContent = '';
 
-    // Split line into tags and non-tags to preserve HTML tags
+    // Iterates through each character in the line to distinguish HTML tags from
+    // regular content. This loop builds an array of parts, where each part is
+    // either an HTML tag (enclosed in <>) or non-tag content. It tracks whether
+    // it's inside a tag using the inTag flag, accumulating tag content in
+    // tagContent and non-tag content in current. The resulting parts array
+    // allows safe application of search highlighting only to non-tag content,
+    // preserving HTML syntax.
     for (let i = 0; i < line.length; i++) {
       if (line[i] === '<' && !inTag) {
         if (current) parts.push({ text: current, isTag: false });
