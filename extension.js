@@ -314,6 +314,7 @@ function highlightJson(code, searchKeyword = '') {
     let inTag = false;
     let tagContent = '';
 
+    // Split line into tags and non-tags to preserve HTML tags
     for (let i = 0; i < line.length; i++) {
       if (line[i] === '<' && !inTag) {
         if (current) parts.push({ text: current, isTag: false });
@@ -334,7 +335,7 @@ function highlightJson(code, searchKeyword = '') {
     if (current) parts.push({ text: current, isTag: false });
     if (tagContent) parts.push({ text: tagContent, isTag: inTag });
 
-    // Apply regex to non-tag parts only
+    // Highlight search keyword in non-tag parts only
     const processedParts = parts.map(part => {
       if (part.isTag) {
         return part.text;
@@ -342,7 +343,6 @@ function highlightJson(code, searchKeyword = '') {
       return part.text.replace(regex, '<span class="highlight-match">$1</span>');
     });
 
-    // Reconstruct the line
     const modifiedLine = processedParts.join('');
     return `<span class="line-number unselectable">${index + 1}</span>${modifiedLine}`;
   }).join('\n');
