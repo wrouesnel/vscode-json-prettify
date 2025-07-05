@@ -110,5 +110,55 @@ suite('Extension Test Suite', () => {
         'should return a single line number for empty input'
       );
     });
+
+    test('should handle case-insensitive keyword matching', () => {
+      const code = '{"Key": "value"}';
+      const searchKeyword = 'key';
+      sandbox.stub(hljs, 'highlight').returns({ value: '<span class="hljs-string">"Key"</span>: <span class="hljs-string">"value"</span>' });
+      const result = extension.highlightJson(code, searchKeyword);
+      assert.strictEqual(
+        result,
+        '<span class="line-number unselectable">1</span><span class="hljs-string">"<span class="highlight-match">Key</span>"</span>: <span class="hljs-string">"value"</span>',
+        'should highlight keyword case-insensitively'
+      );
+    });
+
+    test('should highlight multiple keyword occurrences in a single line', () => {
+      const code = '{"key": "key value"}';
+      const searchKeyword = 'key';
+      sandbox.stub(hljs, 'highlight').returns({ value: '<span class="hljs-string">"key"</span>: <span class="hljs-string">"key value"</span>' });
+      const result = extension.highlightJson(code, searchKeyword);
+      assert.strictEqual(
+        result,
+        '<span class="line-number unselectable">1</span><span class="hljs-string">"<span class="highlight-match">key</span>"</span>: <span class="hljs-string">"<span class="highlight-match">key</span> value"</span>',
+        'should highlight all keyword occurrences in non-tag content'
+      );
+    });
+
+    test('should handle no keyword matches', () => {
+      const code = '{"key": "value"}';
+      const searchKeyword = 'missing';
+      sandbox.stub(hljs, 'highlight').returns({ value: '<span class="hljs-string">"key"</span>: <span class="hljs-string">"value"</span>' });
+      const result = extension.highlightJson(code, searchKeyword);
+      assert.strictEqual(
+        result,
+        '<span class="line-number unselectable">1</span><span class="hljs-string">"key"</span>: <span class="hljs-string">"value"</span>',
+        'should return highlighted JSON with line number when no keywords match'
+      );
+    });
+
+    test('should handle empty or null search keyword', () => {
+      const code = '{"key": "value"}';
+      const searchKeywords = ['', null];
+      sandbox.stub(hljs, 'highlight').returns({ value: '<span class="hljs-string">"key"</span>: <span class="hljs-string">"value"</span>' });
+      searchKeywords.forEach(searchKeyword => {
+        const result = extension.highlightJson(code, searchKeyword);
+        assert.strictEqual(
+          result,
+          '<span class="line-number unselectable">1</span><span class="hljs-string">"key"</span>: <span class="hljs-string">"value"</span>',
+          `should return highlighted JSON with line number for ${searchKeyword === '' ? 'empty' : 'null'} search keyword`
+        );
+      });
+    });
   });
 });
