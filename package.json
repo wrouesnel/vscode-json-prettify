@@ -35,9 +35,11 @@
     ]
   },
   "scripts": {
-    "lint": "eslint .",
+    "lint": "eslint extension.js test/*.js",
     "pretest": "npm run lint",
     "test": "vscode-test",
+    "testzz": "mocha ./test/extension.test.js",
+    "testz": "node ./test/runTest.js",
     "package": "npm version patch -m \"version %s\" && npm install && vsce package"
   },
   "devDependencies": {
@@ -45,10 +47,13 @@
     "@types/node": "20.x",
     "@types/vscode": "^1.60.0",
     "@vscode/test-cli": "^0.0.10",
-    "@vscode/test-electron": "^2.4.1",
-    "eslint": "^9.9.1"
+    "@vscode/test-electron": "^2.5.2",
+    "eslint": "^9.9.1",
+    "mocha": "^10.8.2",
+    "sinon": "^21.0.0"
   },
   "dependencies": {
-    "highlight.js": "^11.10.0"
+    "highlight.js": "^11.10.0",
+    "pino": "^9.7.0"
   }
 }

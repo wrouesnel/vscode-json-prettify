@@ -3,9 +3,12 @@
 const vscode = require('vscode');
 const fs = require('fs');
 const path = require('path');
+const pino = require('pino');
 
 const hljs = require('highlight.js/lib/core');
 hljs.registerLanguage('json', require('highlight.js/lib/languages/json'));
+
+const defaultLogger = pino();
 
 const GLOBAL_STATE_WRAP_TOGGLE = 'wrap-toggle';
 const GLOBAL_STATE_STICKY_TOGGLE = 'sticky-toggle';
@@ -133,7 +136,7 @@ function createWebviewPanel(context) {
           context.globalState.update(GLOBAL_STATE_STICKY_TOGGLE, sticky);
           break;
         case 'logMessage':
-          console.log(message.text);
+          defaultLogger.log(message.text);
           break;
         case 'searchKeyword':
           updatePrettifiedJSON(context, message.keyword, true, message.selectionStart, message.selectionEnd);
@@ -367,7 +370,7 @@ function getThemesHtml() {
   return themeHtml;
 }
 
-function getThemes() {
+function getThemes(logger = defaultLogger) {
   // path to the highlight.js styles directory
   const stylesDir = path.join(__dirname, 'node_modules', 'highlight.js', 'styles');
 
@@ -388,12 +391,13 @@ function getThemes() {
     // Convert Set to Array and sort alphabetically
     return Array.from(themesSet).sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }));
   } catch (err) {
-    console.error(`error reading styles directory ${stylesDir}:`, err);
+    logger.error(`error reading styles directory ${stylesDir}`, err);
     return [];
   }
 }
 
 module.exports = {
   activate,
-  deactivate
+  deactivate,
+  getThemes,
 }
