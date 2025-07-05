@@ -399,5 +399,6 @@ function getThemes(logger = defaultLogger) {
 module.exports = {
   activate,
   deactivate,
-  getThemes,
+  getThemes,  // for testing
+  highlightJson,  // for testing
 }
