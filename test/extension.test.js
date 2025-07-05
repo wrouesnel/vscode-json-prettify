@@ -41,9 +41,10 @@ suite('Extension Test Suite', () => {
     });
 
     test('should handle filesystem errors gracefully', () => {
+      const mockPinoLogger = { error: sandbox.stub() };
       sandbox.stub(fs, 'readdirSync').throws(new Error('Directory not found'));
       sandbox.stub(path, 'join').returns('/mocked/path/to/styles');
-      const themes = extension.getThemes();
+      const themes = extension.getThemes(mockPinoLogger);
       assert.deepStrictEqual(themes, [], 'getThemes should return an empty array on error');
     });
   });
