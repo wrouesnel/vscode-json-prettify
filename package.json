@@ -17,6 +17,7 @@
   "engines": {
     "vscode": "^1.60.0"
   },
+  "license": "MIT",
   "repository": {
     "type": "git",
     "url": "https://github.com/appler1009/vscode-json-prettify.git"
@@ -50,7 +51,8 @@
     "@vscode/test-electron": "^2.5.2",
     "eslint": "^9.9.1",
     "mocha": "^10.8.2",
-    "sinon": "^21.0.0"
+    "sinon": "^21.0.0",
+    "vsce": "^2.15.0"
   },
   "dependencies": {
     "highlight.js": "^11.10.0",

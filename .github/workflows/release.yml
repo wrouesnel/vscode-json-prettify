@@ -11,10 +11,10 @@ jobs:
     permissions:
       contents: write
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v4
 
     - name: Setup Node.js
-      uses: actions/setup-node@v2
+      uses: actions/setup-node@v4
       with:
         node-version: '20'
 
@@ -37,6 +37,13 @@ jobs:
     - name: Get Package Name
       id: package-name
       run: echo "name=$(node -p "require('./package.json').name")" >> $GITHUB_OUTPUT
+
+    - name: Publish to Visual Studio Marketplace
+      uses: HaaLeo/publish-vscode-extension@v2
+      with:
+        pat: ${{ secrets.VSCE_TOKEN }}
+        registryUrl: https://marketplace.visualstudio.com
+        packagePath: ${{ steps.package-name.outputs.name }}-${{ steps.get_version.outputs.VERSION }}.vsix
 
     - name: Create Release
       id: create_release
