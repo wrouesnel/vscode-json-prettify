@@ -37,12 +37,6 @@ jobs:
     - name: Package Extension
       run: npx vsce package --out pretty-json-preview-${{ steps.get_version.outputs.VERSION }}.vsix
 
-    - name: Debug Directory Contents
-      run: ls -l ${{ github.workspace }}
-
-    - name: Debug Find VSIX
-      run: find ${{ github.workspace }} -name '*.vsix' -type f
-
     - name: Get Package Name
       id: package-name
       run: echo "name=$(node -p "require('./package.json').name")" >> $GITHUB_OUTPUT
@@ -52,12 +46,12 @@ jobs:
 
     - name: Create Release
       id: create_release
-      uses: actions/create-release@v1
+      uses: softprops/action-gh-release@v2
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
         tag_name: ${{ github.ref }}
-        release_name: Release ${{ steps.get_version.outputs.VERSION }}
+        name: Release ${{ steps.get_version.outputs.VERSION }}
         body_path: CHANGELOG.md
         draft: false
         prerelease: false
