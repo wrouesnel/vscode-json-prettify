@@ -37,6 +37,12 @@ jobs:
     - name: Package Extension
       run: npx vsce package --out pretty-json-preview-${{ steps.get_version.outputs.VERSION }}.vsix
 
+    - name: Debug Directory Contents
+      run: ls -l ${{ github.workspace }}
+
+    - name: Debug Find VSIX
+      run: find ${{ github.workspace }} -name '*.vsix' -type f
+
     - name: Get Package Name
       id: package-name
       run: echo "name=$(node -p "require('./package.json').name")" >> $GITHUB_OUTPUT
