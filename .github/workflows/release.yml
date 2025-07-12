@@ -48,10 +48,7 @@ jobs:
       run: echo "name=$(node -p "require('./package.json').name")" >> $GITHUB_OUTPUT
 
     - name: Publish to Visual Studio Marketplace
-      uses: cezarypiatek/vscode-extension-publisher@v1
-      with:
-        extensionFile: ${{ github.workspace }}/pretty-json-preview-${{ steps.get_version.outputs.VERSION }}.vsix
-        pat: ${{ secrets.VSCE_TOKEN }}
+      run: npx vsce publish --packagePath ${{ github.workspace }}/pretty-json-preview-${{ steps.get_version.outputs.VERSION }}.vsix -p ${{ secrets.VSCE_TOKEN }}
 
     - name: Create Release
       id: create_release
