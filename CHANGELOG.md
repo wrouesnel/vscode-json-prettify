@@ -2,3 +2,4 @@
 
 - Keyword highlighting (or "search").
 - Github actions maintenance and improvements.
+- Underlying packaging improvements.
