@@ -371,27 +371,12 @@ function getThemesHtml() {
 }
 
 function getThemes(logger = defaultLogger) {
-  // path to the highlight.js styles directory
-  const stylesDir = path.join(__dirname, 'node_modules', 'highlight.js', 'styles');
-
   try {
-    const files = fs.readdirSync(stylesDir);
-
-    // de-dup
-    const themesSet = new Set();
-
-    files.forEach(file => {
-      if (file.endsWith('.css')) {
-        let themeName = path.basename(file, '.css');
-        themeName = themeName.replace(/\.min$/, '');  // remove `.min`
-        themesSet.add(themeName);
-      }
-    });
-
-    // Convert Set to Array and sort alphabetically
-    return Array.from(themesSet).sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }));
+    const themesFile = path.join(__dirname, '..', 'dist', 'themes.json');
+    const themes = JSON.parse(fs.readFileSync(themesFile, 'utf8'));
+    return themes; // Already sorted during build
   } catch (err) {
-    logger.error(`error reading styles directory ${stylesDir}`, err);
+    logger.error(`Error reading themes file ${themesFile}`, err);
     return [];
   }
 }

@@ -26,7 +26,7 @@
     "Formatters"
   ],
   "activationEvents": [],
-  "main": "./extension.js",
+  "main": "./dist/extension.js",
   "contributes": {
     "commands": [
       {
@@ -39,8 +39,9 @@
     "lint": "eslint extension.js test/*.js",
     "pretest": "npm run lint",
     "test": "vscode-test",
-    "dev-package": "npm version patch -m \"version %s\" && npm install && vsce package",
-    "package": "vsce package"
+    "build": "node scripts/generate-themes.js && esbuild ./extension.js --bundle --outfile=dist/extension.js --platform=node --format=cjs --external:vscode",
+    "package": "npm run build && vsce package --out pretty-json-preview-${npm_package_version}.vsix",
+    "dev-package": "npm version patch -m \"version %s\" && npm install && npm run build && vsce package --out pretty-json-preview-${npm_package_version}.vsix"
   },
   "devDependencies": {
     "@types/mocha": "^10.0.7",
@@ -48,6 +49,7 @@
     "@types/vscode": "^1.60.0",
     "@vscode/test-cli": "^0.0.10",
     "@vscode/test-electron": "^2.5.2",
+    "esbuild": "^0.25.6",
     "eslint": "^9.9.1",
     "mocha": "^10.8.2",
     "sinon": "^21.0.0",

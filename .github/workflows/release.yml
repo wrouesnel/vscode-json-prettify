@@ -2,8 +2,8 @@ name: Create Release
 
 on:
   push:
-    tags:
-      - 'v*'
+    branches:
+      - github-actions-warnings
 
 jobs:
   build:
@@ -30,9 +30,12 @@ jobs:
         sudo apt-get install -y xvfb
         xvfb-run -a npm test
 
+    - name: Build Extension
+      run: npm run build
+
     - name: Get Version
       id: get_version
-      run: echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+      run: echo "VERSION=$(node -p "require('./package.json').version")" >> $GITHUB_OUTPUT
 
     - name: Package Extension
       run: npx vsce package --out pretty-json-preview-${{ steps.get_version.outputs.VERSION }}.vsix
@@ -45,23 +48,13 @@ jobs:
       run: npx vsce publish --packagePath ${{ github.workspace }}/pretty-json-preview-${{ steps.get_version.outputs.VERSION }}.vsix -p ${{ secrets.VSCE_TOKEN }}
 
     - name: Create Release
-      id: create_release
       uses: softprops/action-gh-release@v2
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
-        tag_name: ${{ github.ref }}
+        tag_name: v${{ steps.get_version.outputs.VERSION }}
         name: Release ${{ steps.get_version.outputs.VERSION }}
         body_path: CHANGELOG.md
         draft: false
         prerelease: false
-
-    - name: Upload Release Asset
-      uses: actions/upload-release-asset@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        upload_url: ${{ steps.create_release.outputs.upload_url }}
-        asset_path: ${{ github.workspace }}/pretty-json-preview-${{ steps.get_version.outputs.VERSION }}.vsix
-        asset_name: ${{ steps.package-name.outputs.name }}-${{ steps.get_version.outputs.VERSION }}.vsix
-        asset_content_type: application/octet-stream
+        files: ${{ github.workspace }}/pretty-json-preview-${{ steps.get_version.outputs.VERSION }}.vsix
