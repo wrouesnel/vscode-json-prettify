@@ -371,8 +371,9 @@ function getThemesHtml() {
 }
 
 function getThemes(logger = defaultLogger) {
+  let themesFile;
   try {
-    const themesFile = path.join(__dirname, '..', 'dist', 'themes.json');
+    themesFile = path.join(__dirname, '..', 'dist', 'themes.json');
     const themes = JSON.parse(fs.readFileSync(themesFile, 'utf8'));
     return themes; // Already sorted during build
   } catch (err) {

@@ -8,7 +8,6 @@ const { after, beforeEach, afterEach, suite, test } = require('mocha');
 
 const extension = require('../extension');
 
-
 suite('Extension Test Suite', () => {
   let sandbox;
 
@@ -25,27 +24,28 @@ suite('Extension Test Suite', () => {
   });
 
   suite('getThemes function', () => {
-    test('should return sorted list of unique theme names from CSS files', () => {
-      const mockFiles = ['default.css', 'dark.min.css', 'light.css', 'solarized-dark.min.css'];
-      sandbox.stub(fs, 'readdirSync').returns(mockFiles);
-      sandbox.stub(path, 'join').returns('/mocked/path/to/styles');
+    test('should return sorted list of unique theme names from themes.json', () => {
+      const mockThemes = ['default', 'dark', 'light', 'solarized-dark'];
+      sandbox.stub(fs, 'readFileSync').returns(JSON.stringify(mockThemes));
+      sandbox.stub(path, 'join').returns('/mocked/path/to/themes.json');
       const themes = extension.getThemes();
-      assert.deepStrictEqual(themes, ['dark', 'default', 'light', 'solarized-dark']);
+      assert.deepStrictEqual(themes, mockThemes, 'should return themes from themes.json');
     });
 
-    test('should handle empty styles directory', () => {
-      sandbox.stub(fs, 'readdirSync').returns([]);
-      sandbox.stub(path, 'join').returns('/mocked/path/to/styles');
+    test('should handle empty themes.json', () => {
+      sandbox.stub(fs, 'readFileSync').returns(JSON.stringify([]));
+      sandbox.stub(path, 'join').returns('/mocked/path/to/themes.json');
       const themes = extension.getThemes();
-      assert.deepStrictEqual(themes, []);
+      assert.deepStrictEqual(themes, [], 'should return empty array for empty themes.json');
     });
 
     test('should handle filesystem errors gracefully', () => {
       const mockPinoLogger = { error: sandbox.stub() };
-      sandbox.stub(fs, 'readdirSync').throws(new Error('Directory not found'));
-      sandbox.stub(path, 'join').returns('/mocked/path/to/styles');
+      sandbox.stub(fs, 'readFileSync').throws(new Error('File not found'));
+      sandbox.stub(path, 'join').returns('/mocked/path/to/themes.json');
       const themes = extension.getThemes(mockPinoLogger);
-      assert.deepStrictEqual(themes, [], 'getThemes should return an empty array on error');
+      assert.deepStrictEqual(themes, [], 'should return empty array on error');
+      assert(mockPinoLogger.error.calledOnce, 'should call logger.error');
     });
   });
 
