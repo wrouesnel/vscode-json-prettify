@@ -62,7 +62,8 @@ function updatePrettifiedJSON(context, searchKeyword = '', searchInputFocused = 
   const editor = vscode.window.activeTextEditor;
   if (editor) {
     const selection = editor.selection;
-    let textRaw = editor.document.getText(selection);
+
+    let textRaw = selection.isEmpty ? editor.document.getText(editor.document.lineAt(selection.active.line).range) : editor.document.getText(selection);
     if (!textRaw) {
       textRaw = '';
     }
