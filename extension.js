@@ -74,21 +74,39 @@ function updatePrettifiedJSON(context, searchKeyword = '', searchInputFocused = 
     }
 
     let done = false;
-    for (const preproc of JSON_PREPROCESSORS) {
-      try {
-        if (!text.startsWith('{')) {
-          continue;
-        }
-        const jsonObject = JSON.parse(preproc(text));
-        const prettifiedJSON = JSON.stringify(jsonObject, null, 2);
-        if (sticky) {
-          latestJson = prettifiedJSON;
-        }
 
-        panel.webview.html = getWebviewContent(prettifiedJSON, searchKeyword, searchInputFocused, searchInputSelectionStart, searchInputSelectionEnd);
-        done = true;  // job done
+    var indices = [] // indices of possible JSON start points to try
+    
+    if (selection.isEmpty) {
+      // If this is a greedy selection, then try and locate any JSON starts which match  
+      for (var i=0; i<text.length;i++) {
+        if ( ["{", "["].includes(text[i]) ) indices.push(i);
+      }
+    } else {
+      // Only allow the first first character
+      indices.push(0);
+    }
+
+    for (var i=0; i<indices.length;i++) {
+      // try and extract JSON from the index
+      textfragment = text.substring(indices[i]);
+      for (const preproc of JSON_PREPROCESSORS) {
+        try {
+          const jsonObject = JSON.parse(preproc(textfragment));
+          const prettifiedJSON = JSON.stringify(jsonObject, null, 2);
+          if (sticky) {
+            latestJson = prettifiedJSON;
+          }
+
+          panel.webview.html = getWebviewContent(prettifiedJSON, searchKeyword, searchInputFocused, searchInputSelectionStart, searchInputSelectionEnd);
+          done = true;  // job done
+          break;
+        } catch { /* ignore */ }
+      }
+      // if we succeeded then stop
+      if (done) {
         break;
-      } catch { /* ignore */ }
+      }
     }
     if (!done) {
       if (!sticky) {
