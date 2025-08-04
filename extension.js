@@ -12,12 +12,14 @@ const defaultLogger = pino();
 
 const GLOBAL_STATE_WRAP_TOGGLE = 'wrap-toggle';
 const GLOBAL_STATE_STICKY_TOGGLE = 'sticky-toggle';
+const GLOBAL_STATE_SMART_TOGGLE = 'smart-toggle';
 const GLOBAL_STATE_THEME = 'theme';
 
 let panel;
 let theme;
 let wrap;
 let sticky;
+let smart;
 let latestJson;
 let showBMC = false;
 
@@ -28,6 +30,7 @@ function activate(context) {
   theme = context.globalState.get(GLOBAL_STATE_THEME, 'default');
   wrap = context.globalState.get(GLOBAL_STATE_WRAP_TOGGLE, false);
   sticky = context.globalState.get(GLOBAL_STATE_STICKY_TOGGLE, true);
+  smart = context.globalState.get(GLOBAL_STATE_SMART_TOGGLE, true);
 
   const disposable = vscode.commands.registerCommand('prettyJsonPreview.open', function () {
     if (panel) {
@@ -63,7 +66,12 @@ function updatePrettifiedJSON(context, searchKeyword = '', searchInputFocused = 
   if (editor) {
     const selection = editor.selection;
 
-    let textRaw = selection.isEmpty ? editor.document.getText(editor.document.lineAt(selection.active.line).range) : editor.document.getText(selection);
+    var textRaw = editor.document.getText(selection);
+    if (smart) {
+      if (selection.isEmpty) {
+        textRaw = editor.document.getText(editor.document.lineAt(selection.active.line).range);
+      }
+    }
     if (!textRaw) {
       textRaw = '';
     }
@@ -77,7 +85,7 @@ function updatePrettifiedJSON(context, searchKeyword = '', searchInputFocused = 
 
     var indices = [] // indices of possible JSON start points to try
     
-    if (selection.isEmpty) {
+    if (smart && selection.isEmpty) {
       // If this is a greedy selection, then try and locate any JSON starts which match  
       for (var i=0; i<text.length;i++) {
         if ( ["{", "["].includes(text[i]) ) indices.push(i);
@@ -154,6 +162,10 @@ function createWebviewPanel(context) {
           sticky = message.sticky;
           context.globalState.update(GLOBAL_STATE_STICKY_TOGGLE, sticky);
           break;
+        case 'smartChanged':
+          smart = message.smart;
+          context.globalState.update(GLOBAL_STATE_SMART_TOGGLE, smart);
+          break;
         case 'logMessage':
           defaultLogger.log(message.text);
           break;
@@ -209,6 +221,7 @@ function getWebviewContent(content, searchKeyword = '', searchInputFocused, sear
       <div class="toolbar unselectable">
         <label class='button'><input type="checkbox" id="wrap-toggle" /> Wrap</label>
         <label class='button'><input type="checkbox" id="sticky-toggle" /> Sticky</label>
+        <label class='button'><input type="checkbox" id="smart-toggle" /> Smart</label>
         <label class='button'>Theme <select id="theme-select">
           ${themeHtml}
         </select></label>
@@ -220,6 +233,7 @@ function getWebviewContent(content, searchKeyword = '', searchInputFocused, sear
         const codeElement = document.getElementById('json-code');
         const wrapToggle = document.getElementById('wrap-toggle');
         const stickyToggle = document.getElementById('sticky-toggle');
+        const smartToggle = document.getElementById('smart-toggle');
         const themeSelect = document.getElementById('theme-select');
         const searchInput = document.getElementById('search-input');
 
@@ -235,6 +249,13 @@ function getWebviewContent(content, searchKeyword = '', searchInputFocused, sear
           vscode.postMessage({
             command: 'stickyChanged',
             sticky: e.target.checked
+          });
+        });
+
+        smartToggle.addEventListener('change', (e) => {
+          vscode.postMessage({
+            command: 'smartChanged',
+            smart: e.target.checked
           });
         });
 
@@ -314,6 +335,7 @@ function getWebviewContent(content, searchKeyword = '', searchInputFocused, sear
         themeSelect.value = '${theme}';
         wrapToggle.checked = ${wrap};
         stickyToggle.checked = ${sticky};
+        smartToggle.checked = ${smart};
         codeElement.style.whiteSpace = "${wrap ? 'pre-wrap' : 'pre'}";
       </script>
 
