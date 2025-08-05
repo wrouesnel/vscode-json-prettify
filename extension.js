@@ -66,7 +66,7 @@ function updatePrettifiedJSON(context, searchKeyword = '', searchInputFocused = 
   if (editor) {
     const selection = editor.selection;
 
-    var textRaw = editor.document.getText(selection);
+    let textRaw = editor.document.getText(selection);
     if (smart) {
       if (selection.isEmpty) {
         textRaw = editor.document.getText(editor.document.lineAt(selection.active.line).range);
@@ -83,48 +83,61 @@ function updatePrettifiedJSON(context, searchKeyword = '', searchInputFocused = 
 
     let done = false;
 
-    var indices = [] // indices of possible JSON start points to try
+    let indices = [] // indices of possible JSON start points to try
+    let end_indices = [] // JSON terminating indices to try
     
     if (smart && selection.isEmpty) {
       // If this is a greedy selection, then try and locate any JSON starts which match  
       for (var i=0; i<text.length;i++) {
         if ( ["{", "["].includes(text[i]) ) indices.push(i);
+        if ( ["}", "]"].includes(text[i]) ) end_indices.push(i+1);
       }
+      end_indices.reverse();
     } else {
       // Only allow the first first character
       indices.push(0);
     }
 
-    for (var i=0; i<indices.length;i++) {
-      // try and extract JSON from the index
-      textfragment = text.substring(indices[i]);
-      for (const preproc of JSON_PREPROCESSORS) {
-        try {
-          const jsonObject = JSON.parse(preproc(textfragment));
-          const prettifiedJSON = JSON.stringify(jsonObject, null, 2);
-          if (sticky) {
-            latestJson = prettifiedJSON;
-          }
-
-          panel.webview.html = getWebviewContent(prettifiedJSON, searchKeyword, searchInputFocused, searchInputSelectionStart, searchInputSelectionEnd);
-          done = true;  // job done
-          break;
-        } catch { /* ignore */ }
+    let resultJSON = undefined;
+    for (let i=0; i<indices.length;i++) {
+      // try the longest possible match first
+      resultJSON = tryJSONParse(text.substring(indices[i]))
+      if (resultJSON !== undefined) {
+        // successful result
+        break;
       }
-      // if we succeeded then stop
-      if (done) {
+      // try parsing successive strings from possible terminators
+      for (let k=0; k < end_indices.length;k++) {
+        resultJSON = tryJSONParse(text.substring(indices[i], end_indices[k]))
+        if (resultJSON !== undefined) {
+          // successful result
+          break;
+        }
+      }
+      if (resultJSON !== undefined) {
+        // successful result
         break;
       }
     }
-    if (!done) {
-      if (!sticky) {
-        latestJson = undefined;
-      }
-      panel.webview.html = getWebviewContent(undefined, searchKeyword, searchInputFocused, searchInputSelectionStart, searchInputSelectionEnd);
+    
+    if (!sticky || resultJSON !== undefined) {
+      latestJson = resultJSON;
     }
-  } else {
-    panel.webview.html = getWebviewContent(undefined, searchKeyword, searchInputFocused, searchInputSelectionStart, searchInputSelectionEnd);
+
+    panel.webview.html = getWebviewContent(latestJson, searchKeyword, searchInputFocused, searchInputSelectionStart, searchInputSelectionEnd);
+}
+
+function tryJSONParse(textfragment) {
+  var done = false;
+  for (const preproc of JSON_PREPROCESSORS) {
+      try {
+        const jsonObject = JSON.parse(preproc(textfragment));
+        return JSON.stringify(jsonObject, null, 2);
+        
+      } catch { /* ignore */ }
+    }
   }
+  return undefined;
 }
 
 function createWebviewPanel(context) {
